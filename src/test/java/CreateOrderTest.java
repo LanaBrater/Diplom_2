@@ -1,27 +1,30 @@
 import io.qameta.allure.Description;
-import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.ValidatableResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import pojo.IngredientsResponse;
 import pojo.Order;
 import io.qameta.allure.Step;
+import pojo.User;
 
-import static io.restassured.RestAssured.given;
 import static org.apache.http.HttpStatus.*;
 
 public class CreateOrderTest {
 
     private UserOrders userOrders;
     private String token;
-    private final String[] INGREDIENTS= {"61c0c5a71d1f82001bdaaa6d","61c0c5a71d1f82001bdaaa6f"};
     private final String BURGER_NAME = "Бессмертный флюоресцентный бургер";
+    private User user;
 
+    private ValidatableResponse validatableResponse;
     @Before
     public void setUp() {
         userOrders = new UserOrders();
-        token = new UserAuth().createUser(new RandomUserGenerator().getRandomUser())
+        user = new RandomUserGenerator().getRandomUser();
+        validatableResponse = new UserAuth().createUser(user);
+        token = validatableResponse
                 .extract()
                 .path("accessToken");
     }
@@ -36,14 +39,19 @@ public class CreateOrderTest {
     @Test
     @Description("Создание заказа с авторизацией")
     public void createOrderWithAuth() {
-        ValidatableResponse response = userOrders.createOrder(token, new Order(INGREDIENTS));
+        new UserAuth().loginUser(new RandomUserGenerator().getLoginForm(user));
+        IngredientsResponse ingredientsResponse = userOrders.getIngredients();
+        String[] ingredients = new String[] {ingredientsResponse.getData().get(0).getId(), ingredientsResponse.getData().get(1).getId()};
+        ValidatableResponse response = userOrders.createOrder(token, new Order(ingredients));
         checkResponseWithAuth(response);
     }
 
     @Test
     @Description("Создание заказа без авторизации")
     public void createOrderWithoutAuth() {
-        ValidatableResponse response = userOrders.createOrder(new Order(INGREDIENTS));
+        IngredientsResponse ingredientsResponse = userOrders.getIngredients();
+        String[] ingredients = new String[] {ingredientsResponse.getData().get(0).getId(), ingredientsResponse.getData().get(1).getId()};
+        ValidatableResponse response = userOrders.createOrder(new Order(ingredients));
         checkResponseWithoutAuth(response);
     }
 

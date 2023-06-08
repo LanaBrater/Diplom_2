@@ -1,11 +1,11 @@
 import io.qameta.allure.Description;
 import io.qameta.allure.Step;
-import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.ValidatableResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import pojo.IngredientsResponse;
 import pojo.Order;
 
 import static org.apache.http.HttpStatus.SC_OK;
@@ -14,7 +14,6 @@ import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 public class GetUserOrdersTest {
     private UserOrders userOrders;
     private String token;
-    private final String[] INGREDIENTS = {"61c0c5a71d1f82001bdaaa6d","61c0c5a71d1f82001bdaaa6f"};
     private String expectedId;
     private String expectedStatus;
     private String expectedName;
@@ -28,7 +27,9 @@ public class GetUserOrdersTest {
         token = new UserAuth().createUser(new RandomUserGenerator().getRandomUser())
                 .extract()
                 .path("accessToken");
-        ValidatableResponse response = userOrders.createOrder(token, new Order(INGREDIENTS));
+        IngredientsResponse ingredientsResponse = userOrders.getIngredients();
+        String[] ingredients = new String[] {ingredientsResponse.getData().get(0).getId(), ingredientsResponse.getData().get(1).getId()};
+        ValidatableResponse response = userOrders.createOrder(token, new Order(ingredients));
         expectedId = response.extract().path("order._id");
         expectedStatus = response.extract().path("order.status");
         expectedName = response.extract().path("order.name");
@@ -81,8 +82,8 @@ public class GetUserOrdersTest {
     @Step("Проверка ответа на получение заказов неавторизованного пользователя")
     private void checkResponseOfUnauthUser(ValidatableResponse response) {
         String expectedMessage = "You should be authorised";
-        boolean success = response.extract().path("success");
         Assert.assertEquals(SC_UNAUTHORIZED, response.extract().statusCode());
-        Assert.assertEquals(Boolean.FALSE, success);
+        Assert.assertEquals(Boolean.FALSE, response.extract().path("success"));
+        Assert.assertEquals(expectedMessage, response.extract().path("message"));
     }
 }
